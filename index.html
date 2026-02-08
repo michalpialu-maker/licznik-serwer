@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>xawito views</title>
+    <style>
+        /* --- OGÓLNE --- */
+        body {
+            background-color: black;
+            color: #ff0000;
+            font-family: sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* --- LOGO FIXED (Prawy górny róg) --- */
+        .top-logo {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            width: 50px;
+            height: auto;
+            z-index: 100;
+        }
+
+        /* --- SEKCJA GŁÓWNA --- */
+        .hero-section {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .header {
+            font-weight: bold;
+            font-size: 3vh;
+            margin-bottom: 0;
+            text-transform: lowercase;
+        }
+
+        #suma {
+            font-size: 11vw;
+            font-weight: 900;
+            line-height: 1;
+            margin: 10px 0;
+            text-align: center;
+            white-space: nowrap;
+            width: 100%;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .footer {
+            font-size: 3vh;
+            font-weight: bold;
+            color: #ff0000;
+            margin-bottom: 20px;
+        }
+
+        .scroll-hint {
+            font-size: 1.5rem;
+            animation: bounce 2s infinite;
+            opacity: 0.5;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+            40% {transform: translateY(-10px);}
+            60% {transform: translateY(-5px);}
+        }
+
+        /* --- LISTA TELEDYSKÓW --- */
+        .list-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 50px 20px 50px 20px;
+        }
+
+        .list-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 20px;
+            padding: 15px 0;
+            border-bottom: 1px solid #330000;
+            align-items: center;
+            transition: 0.3s;
+        }
+
+        .list-row:hover {
+            background-color: #0a0000;
+        }
+
+        .col-author { font-weight: bold; text-transform: uppercase; font-size: 0.9rem; color: #cc0000; }
+        .col-title { font-weight: normal; color: #ff4d4d; }
+        .col-views { font-weight: 900; text-align: right; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+
+        /* --- STOPKA --- */
+        .bottom-credits {
+            text-align: center;
+            padding: 40px 0 60px 0;
+            opacity: 0.8;
+        }
+
+        .bottom-logo {
+            width: 50px;
+            height: auto;
+            margin-bottom: 10px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .bottom-text {
+            font-size: 0.8rem;
+            color: #ff0000;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 600px) {
+            .list-row {
+                grid-template-columns: 1fr auto;
+                grid-template-areas: "title title" "author views";
+                gap: 5px;
+            }
+            .col-title { grid-area: title; font-size: 1.1rem; }
+            .col-author { grid-area: author; font-size: 0.8rem; opacity: 0.8; }
+            .col-views { grid-area: views; font-size: 1rem; }
+            .top-logo { width: 40px; top: 20px; right: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <img src="logo.png" alt="Logo" class="top-logo">
+
+    <div class="hero-section">
+        <div class="header">xawito</div>
+        <div id="suma">...</div>
+        <div class="footer">views</div>
+        <div class="scroll-hint">▼</div>
+    </div>
+
+    <div class="list-container" id="lista-teledyskow">
+        <div style="text-align: center; color: #333;">
+            Łączenie z serwerem...<br>
+            <small style="font-size: 0.7rem; color: #555;">(Pierwsze uruchomienie może potrwać do 30s)</small>
+        </div>
+    </div>
+
+    <div class="bottom-credits">
+        <img src="logo.png" alt="Logo" class="bottom-logo">
+        <div class="bottom-text">@xawito_ @pielotoja</div>
+    </div>
+
+    <script>
+        // ==================================================================
+        // TWOJE POŁĄCZENIE Z SERWEREM (BEZPIECZNE PROXY)
+        const ADRES_SERWERA = 'https://licznik-serwer.onrender.com/stats'; 
+        // ==================================================================
+
+        let mainCurrent = 0;
+        let mainTarget = 0;
+        let mainSpeed = 0;
+        let stanFilmow = {}; 
+        let ostatniCzas = 0;
+        let pierwszeUruchomienie = true;
+
+        // --- SILNIK GRAFICZNY ---
+        function petlaAnimacji(czas) {
+            if (!ostatniCzas) ostatniCzas = czas;
+            const delta = czas - ostatniCzas; 
+            ostatniCzas = czas;
+            const mnoznikCzasu = delta / 1000;
+
+            // 1. Animacja Głównej Sumy
+            if (mainCurrent < mainTarget) {
+                mainCurrent += mainSpeed * mnoznikCzasu;
+                if (!pierwszeUruchomienie && mainCurrent > mainTarget) mainCurrent = mainTarget;
+            }
+            document.getElementById('suma').innerText = Math.floor(mainCurrent).toLocaleString('pl-PL');
+
+            // 2. Animacja Listy
+            for (const idFilmu in stanFilmow) {
+                const film = stanFilmow[idFilmu];
+                if (film.current < film.target) {
+                    film.current += film.speed * mnoznikCzasu;
+                    if (!pierwszeUruchomienie && film.current > film.target) film.current = film.target;
+                    
+                    const elementHTML = document.getElementById(`views-${idFilmu}`);
+                    if (elementHTML) {
+                        elementHTML.innerText = Math.floor(film.current).toLocaleString('pl-PL');
+                    }
+                }
+            }
+            requestAnimationFrame(petlaAnimacji);
+        }
+
+        requestAnimationFrame(petlaAnimacji);
+
+        async function pobierzWyswietlenia() {
+            try {
+                // Pobieramy dane z Twojego serwera Render
+                const odpowiedz = await fetch(ADRES_SERWERA);
+                
+                if (!odpowiedz.ok) throw new Error("Błąd sieci");
+
+                const dane = await odpowiedz.json();
+                
+                let sumaZApi = 0;
+                let listaDanych = [];
+
+                if(dane.items) {
+                    dane.items.forEach(film => {
+                        const views = parseInt(film.statistics.viewCount);
+                        sumaZApi += views;
+                        const id = film.id;
+
+                        listaDanych.push({
+                            id: id,
+                            tytul: film.snippet.title,
+                            autor: film.snippet.channelTitle,
+                            views: views
+                        });
+
+                        // Logika animacji pojedynczych filmów (każdy goni swój cel z inną prędkością)
+                        if (!stanFilmow[id]) {
+                            stanFilmow[id] = {
+                                current: views - (Math.random() * 20 + 5), // Startujemy niżej
+                                target: views,
+                                speed: 0
+                            };
+                            // Wyliczamy prędkość, by nadrobić w 60 sekund
+                            stanFilmow[id].speed = (stanFilmow[id].target - stanFilmow[id].current) / 60;
+                        } else {
+                            stanFilmow[id].target = views;
+                            const roznica = stanFilmow[id].target - stanFilmow[id].current;
+                            // Jeśli przyszły nowe viewsy, ustawiamy nową prędkość
+                            stanFilmow[id].speed = roznica > 0 ? (roznica / 60) + 0.02 : 0;
+                        }
+                    });
+                }
+
+                // Logika animacji głównego licznika (startuje 200 niżej)
+                if (pierwszeUruchomienie) {
+                    mainTarget = sumaZApi;
+                    mainCurrent = sumaZApi - 200; 
+                    mainSpeed = 200 / 60;
+                    pierwszeUruchomienie = false;
+                } else {
+                    mainTarget = sumaZApi;
+                    const roznica = mainTarget - mainCurrent;
+                    mainSpeed = roznica > 0 ? (roznica / 60) + 0.1 : 0;
+                }
+
+                // Budowanie listy na dole
+                listaDanych.sort((a, b) => b.views - a.views);
+                const kontenerListy = document.getElementById('lista-teledyskow');
+                
+                if (kontenerListy.children.length === 0 || kontenerListy.children.length !== listaDanych.length) {
+                    kontenerListy.innerHTML = '';
+                    listaDanych.forEach(film => {
+                        const wiersz = document.createElement('div');
+                        wiersz.className = 'list-row';
+                        wiersz.innerHTML = `
+                            <div class="col-author">${film.autor}</div>
+                            <div class="col-title">${film.tytul}</div>
+                            <div class="col-views" id="views-${film.id}">...</div>
+                        `;
+                        kontenerListy.appendChild(wiersz);
+                    });
+                }
+                
+            } catch (blad) {
+                console.error("Serwer Render jeszcze wstaje lub błąd:", blad);
+            }
+        }
+
+        pobierzWyswietlenia();
+        // Odpytujemy Twój serwer co 60 sekund
+        setInterval(pobierzWyswietlenia, 60000);
+    </script>
+</body>
+</html>
